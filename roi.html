@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROI Calculator — RicochetAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0f172a;
+      --bg-2:         #1e293b;
+      --bg-3:         #263548;
+      --accent:       #f97316;
+      --accent-light: rgba(249,115,22,0.1);
+      --text:         #ffffff;
+      --text-muted:   #94a3b8;
+      --border:       rgba(255,255,255,0.08);
+      --green:        #f97316;
+      --green-light:  rgba(249,115,22,0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.7;
+    }
+
+    /* ── Grain texture ──────────────────────────────────────── */
+    #grain {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.038;
+    }
+
+    /* ── Nav ────────────────────────────────────────────────── */
+    #site-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      padding: 1.125rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: background 0.2s ease, border-bottom 0.2s ease;
+    }
+
+    .nav-logo { height: 2rem; width: auto; display: block; }
+
+    /* btn base — matches index.html exactly */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                  box-shadow 0.22s ease;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, transparent 55%);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    .btn:hover  { transform: translateY(-2px) scale(1.02); }
+    .btn:active { transform: translateY(0) scale(0.985); }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    .btn--nav {
+      background: var(--accent);
+      color: #0f172a;
+      padding: 0.5625rem 1.25rem;
+      font-size: 0.875rem;
+      letter-spacing: -0.01em;
+      box-shadow: 0 2px 14px rgba(249,115,22,0.18);
+    }
+
+    .btn--nav:hover { box-shadow: 0 4px 24px rgba(249,115,22,0.32); }
+
+    .btn--primary {
+      background: var(--accent);
+      color: #0f172a;
+      padding: 0.875rem 1.875rem;
+      font-size: 0.9375rem;
+      letter-spacing: -0.01em;
+      box-shadow: 0 4px 24px rgba(249,115,22,0.22), 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    .btn--primary:hover { box-shadow: 0 8px 40px rgba(249,115,22,0.38), 0 2px 8px rgba(0,0,0,0.5); }
+
+    .btn--large {
+      padding: 1.0625rem 2.375rem;
+      font-size: 1.0625rem;
+    }
+
+    /* ── Section label ──────────────────────────────────────── */
+    .label {
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      opacity: 0.85;
+    }
+
+    /* ── Glow helper ────────────────────────────────────────── */
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* ── Rule dividers ──────────────────────────────────────── */
+    .rule {
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,0.06), transparent);
+    }
+
+    .rule--amber {
+      background: linear-gradient(to right, transparent, rgba(249,115,22,0.18), transparent);
+    }
+
+    /* ── Hero ───────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      text-align: center;
+      padding: 7rem 1.5rem 3rem;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.875rem, 4vw, 2.5rem);
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 0.875rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 460px;
+      margin: 0 auto;
+      line-height: 1.7;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ── Page container ─────────────────────────────────────── */
+    .page {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ── Glass card (inputs, payback) ───────────────────────── */
+    .card {
+      background: rgba(30,41,59,0.55);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 1.125rem;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
+                  border-color 0.25s ease,
+                  box-shadow 0.25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(249,115,22,0.22);
+      box-shadow: 0 24px 60px rgba(15,23,42,0.55),
+                  0 0 0 1px rgba(249,115,22,0.08) inset;
+    }
+
+    /* ── Inputs ─────────────────────────────────────────────── */
+    .inputs-section {
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .inputs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.125rem;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 8px; }
+
+    .field label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .field-note {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      opacity: 0.65;
+      margin-top: -2px;
+      line-height: 1.5;
+    }
+
+    .slider-wrap { display: flex; flex-direction: column; gap: 8px; }
+
+    .slider-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .slider-val span {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 3px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 3px;
+      background: var(--bg-3);
+      outline: none;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+      transition: box-shadow 0.15s ease;
+    }
+
+    input[type="range"]:hover::-webkit-slider-thumb,
+    input[type="range"]:focus::-webkit-slider-thumb {
+      box-shadow: 0 0 0 5px var(--accent-light);
+    }
+
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      margin-top: 2px;
+    }
+
+    /* ── Results grid ───────────────────────────────────────── */
+    .results-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      background: transparent;
+      overflow: visible;
+      margin-bottom: 1.25rem;
+    }
+
+    .result-card {
+      background: rgba(30,41,59,0.55);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 1.125rem;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(15,23,42,0.4);
+      padding: 1.75rem;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .result-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(15,23,42,0.55);
+      border-color: rgba(249,115,22,0.2);
+    }
+
+    .result-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-val {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #f97316;
+      display: block;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .result-sub {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.375rem;
+      display: block;
+    }
+
+    /* ── Payback ────────────────────────────────────────────── */
+    .payback-section {
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .payback-bar-wrap { margin: 1rem 0; }
+
+    .payback-bar-track {
+      height: 5px;
+      background: var(--bg-3);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .payback-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+      max-width: 100%;
+    }
+
+    .payback-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      margin-top: 6px;
+    }
+
+    .payback-stat {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      line-height: 1.65;
+    }
+
+    .payback-stat strong { color: var(--text); font-weight: 600; }
+
+    /* ── Assumptions ────────────────────────────────────────── */
+    .assumptions {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 1rem;
+      margin-bottom: 0;
+    }
+
+    /* ── CTA section ────────────────────────────────────────── */
+    .cta-section {
+      position: relative;
+      padding: 5rem 1.5rem 4.5rem;
+      text-align: center;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    .cta-section h2 {
+      font-size: clamp(1.875rem, 4vw, 2.875rem);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 1rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .cta-section p {
+      font-size: clamp(1rem, 2vw, 1.125rem);
+      color: var(--text-muted);
+      max-width: 460px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.75;
+      position: relative;
+      z-index: 2;
+    }
+
+    .cta-section .btn-wrap {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .site-footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: rgba(15,23,42,0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 2rem 1.5rem 2.5rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .site-footer-inner {
+      max-width: 740px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-logo { height: 1.75rem; width: auto; opacity: 0.82; }
+
+    .footer-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.25rem;
+    }
+
+    .footer-copy {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .inputs-grid     { grid-template-columns: 1fr; }
+      .results-section { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 540px) {
+      #site-nav        { padding: 1rem 1.25rem; }
+      .hero            { padding: 6rem 1.25rem 2.5rem; }
+      .cta-section     { padding: 3.5rem 1.25rem 3rem; }
+      .site-footer-inner { flex-direction: column; align-items: center; text-align: center; }
+      .footer-right    { align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Grain texture (matches index.html) -->
+  <svg id="grain" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <filter id="fn"><feTurbulence type="fractalNoise" baseFrequency="0.88" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    <rect width="100%" height="100%" filter="url(#fn)"/>
+  </svg>
+
+  <!-- Nav (matches index.html) -->
+  <header id="site-nav" role="banner">
+    <a href="/" aria-label="RicochetAI home">
+      <img src="brand_assets/Logo%20removed%20background.png" alt="RicochetAI" class="nav-logo">
+    </a>
+    <a href="https://calendly.com/ricochetai-/discovery-call" class="btn btn--nav" rel="noopener">
+      Book a Free Call
+    </a>
+  </header>
+
+  <!-- Hero -->
+  <div class="hero">
+    <!-- Amber glow behind headline -->
+    <div class="glow" style="top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:400px;background:radial-gradient(ellipse at center, rgba(249,115,22,0.1) 0%, transparent 70%);"></div>
+    <div class="label" style="margin-bottom:1rem;">Fractional C-Suite</div>
+    <h1>Calculate Your ROI</h1>
+    <p>See exactly how much time and revenue you are losing to post-meeting admin every month.</p>
+  </div>
+
+  <!-- Main content -->
+  <div class="page">
+
+    <!-- INPUTS -->
+    <div class="card inputs-section">
+      <span class="label" style="margin-bottom:0.875rem;">Your numbers</span>
+      <div class="inputs-grid">
+
+        <div class="field">
+          <label>Client meetings per week</label>
+          <div class="slider-wrap">
+            <div class="slider-val" id="meetings-val">8 <span>meetings/wk</span></div>
+            <input type="range" id="meetings" min="1" max="30" value="8" step="1">
+            <div class="range-labels"><span>1</span><span>30</span></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Your billing rate</label>
+          <div class="slider-wrap">
+            <div class="slider-val" id="rate-val">£125 <span>/hr</span></div>
+            <input type="range" id="rate" min="50" max="500" value="125" step="5">
+            <div class="range-labels"><span>£50</span><span>£500</span></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Post-meeting admin time</label>
+          <div class="slider-wrap">
+            <div class="slider-val" id="admin-val">25 <span>min/meeting</span></div>
+            <input type="range" id="admin" min="5" max="60" value="25" step="5">
+            <div class="range-labels"><span>5 min</span><span>60 min</span></div>
+          </div>
+          <span class="field-note">Notes, task creation, routing to right client space</span>
+        </div>
+
+        <div class="field">
+          <label>Time automation saves per meeting</label>
+          <div class="slider-wrap">
+            <div class="slider-val" id="saved-val">20 <span>min saved</span></div>
+            <input type="range" id="saved" min="5" max="55" value="20" step="5">
+            <div class="range-labels"><span>5 min</span><span>55 min</span></div>
+          </div>
+          <span class="field-note">Conservative: ~80% of admin automated</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-section">
+      <div class="result-card">
+        <span class="result-label">Admin hours wasted / month</span>
+        <span class="result-val" id="hours-lost">—</span>
+        <span class="result-sub" id="hours-lost-sub">across all client meetings</span>
+      </div>
+      <div class="result-card">
+        <span class="result-label">Revenue lost to admin / month</span>
+        <span class="result-val" id="rev-lost">—</span>
+        <span class="result-sub">at your billing rate</span>
+      </div>
+      <div class="result-card">
+        <span class="result-label">Time recovered / month</span>
+        <span class="result-val" id="time-saved">—</span>
+        <span class="result-sub" id="time-saved-sub">hours returned to you</span>
+      </div>
+      <div class="result-card">
+        <span class="result-label">Value recovered / month</span>
+        <span class="result-val" id="val-saved">—</span>
+        <span class="result-sub" id="val-saved-sub">in billable time recovered</span>
+      </div>
+    </div>
+
+    <!-- PAYBACK -->
+    <div class="card payback-section">
+      <span class="label" style="margin-bottom:0.5rem;">Time to positive ROI</span>
+      <div class="payback-bar-wrap">
+        <div class="payback-bar-track">
+          <div class="payback-bar-fill" id="payback-bar" style="width:0%"></div>
+        </div>
+        <div class="payback-labels">
+          <span>Day 1</span>
+          <span id="payback-label">Payback point</span>
+          <span>Month 3</span>
+        </div>
+      </div>
+      <p class="payback-stat" id="payback-stat">—</p>
+      <p class="payback-stat" id="monthly-roi">—</p>
+    </div>
+
+    <!-- Pitch line elements kept hidden so JS does not error -->
+    <div style="display:none;" aria-hidden="true">
+      <p id="pitch-text"></p>
+      <button id="copy-btn"></button>
+    </div>
+
+    <div class="assumptions">
+      Assumptions: 4.3 weeks/month. Admin time is non-billable by default. Time recovered is conservatively billable at 60%. Numbers are illustrative and actual results vary by workflow.
+    </div>
+
+  </div>
+
+  <!-- CTA (matches index.html CTA section style) -->
+  <div class="cta-section">
+    <div class="rule rule--amber"></div>
+    <!-- Amber spotlight -->
+    <div class="glow" style="top:50%;left:50%;transform:translate(-50%,-50%);width:800px;height:600px;background:radial-gradient(ellipse, rgba(249,115,22,0.1) 0%, rgba(249,115,22,0.04) 38%, transparent 66%);"></div>
+
+    <div class="label" style="margin-bottom:1.25rem; display:block;">Get Started</div>
+    <h2>Ready to Reclaim Your<br>Headspace?</h2>
+    <p>Book a free 30 minute call. We will show you exactly how it works and set everything up for you.</p>
+    <div class="btn-wrap">
+      <a href="https://calendly.com/ricochetai-/discovery-call" class="btn btn--primary btn--large" rel="noopener">
+        Book Your Free Call
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+          <path d="M2.5 7.5h10M8.5 3.5l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- Footer (matches index.html) -->
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <a href="/" aria-label="RicochetAI home">
+        <img src="brand_assets/Logo%20removed%20background.png" alt="RicochetAI" class="footer-logo">
+      </a>
+      <div class="footer-right">
+        <span class="footer-copy">© 2026 RicochetAI. All rights reserved.</span>
+        <a href="mailto:ahmad.ceesay@getricochetai.com" class="footer-copy" style="text-decoration:none; opacity:0.7;">ahmad.ceesay@getricochetai.com</a>
+      </div>
+    </div>
+  </footer>
+
+<script>
+  const WEEKS_PER_MONTH = 4.3;
+  const SETUP_FEE = 450;
+  const MONTHLY_FEE = 150;
+
+  const $ = id => document.getElementById(id);
+
+  function fmt(n) {
+    if (n >= 1000) return '£' + Math.round(n).toLocaleString('en-GB');
+    return '£' + Math.round(n);
+  }
+
+  function fmtHrs(n) {
+    const h = Math.floor(n);
+    const m = Math.round((n - h) * 60);
+    if (m === 0) return h + 'h';
+    if (h === 0) return m + 'm';
+    return h + 'h ' + m + 'm';
+  }
+
+  function update() {
+    const meetings = +$('meetings').value;
+    const rate     = +$('rate').value;
+    const admin    = +$('admin').value;
+    const saved    = +$('saved').value;
+
+    $('meetings-val').innerHTML = meetings + ' <span>meetings/wk</span>';
+    $('rate-val').innerHTML     = '£' + rate + ' <span>/hr</span>';
+    $('admin-val').innerHTML    = admin + ' <span>min/meeting</span>';
+    $('saved-val').innerHTML    = saved + ' <span>min saved</span>';
+
+    const meetingsPerMonth  = meetings * WEEKS_PER_MONTH;
+    const adminHrsLost      = (meetingsPerMonth * admin) / 60;
+    const revLost           = adminHrsLost * rate;
+    const hrsRecovered      = (meetingsPerMonth * saved) / 60;
+    const valRecovered      = hrsRecovered * rate * 0.6;
+    const netMonthly        = valRecovered - MONTHLY_FEE;
+    const paybackDays       = netMonthly > 0 ? Math.round((SETUP_FEE / netMonthly) * 30) : 999;
+    const roiMultiple       = netMonthly > 0 ? (valRecovered / MONTHLY_FEE).toFixed(1) : 0;
+
+    $('hours-lost').textContent   = fmtHrs(adminHrsLost);
+    $('hours-lost-sub').textContent = 'across ' + Math.round(meetingsPerMonth) + ' meetings/month';
+    $('rev-lost').textContent     = fmt(revLost);
+    $('time-saved').textContent   = fmtHrs(hrsRecovered);
+    $('time-saved-sub').textContent = Math.round(meetingsPerMonth) + ' meetings automated';
+    $('val-saved').textContent    = fmt(valRecovered);
+    $('val-saved-sub').textContent = 'in billable time recovered';
+
+    const barPct = paybackDays < 90 ? Math.min((paybackDays / 90) * 100, 100) : 100;
+    $('payback-bar').style.width = barPct + '%';
+
+    if (paybackDays <= 90) {
+      $('payback-label').textContent = 'Day ' + paybackDays;
+      $('payback-stat').innerHTML = 'At your numbers you reach positive ROI in <strong>' + paybackDays + ' days</strong>.';
+    } else {
+      $('payback-label').textContent = 'Check inputs';
+      $('payback-stat').innerHTML = 'Increase savings per meeting or billing rate to improve payback.';
+    }
+
+    if (netMonthly > 0) {
+      $('monthly-roi').innerHTML = 'Monthly ROI multiple: <strong>' + roiMultiple + '×</strong> — for every £1 in managed fee, you recover <strong>' + fmt(valRecovered / MONTHLY_FEE) + '</strong> in billable time.';
+    } else {
+      $('monthly-roi').innerHTML = 'Adjust inputs — increase meetings or time saved to show positive ROI.';
+    }
+
+    const pitch = `"You're running ${Math.round(meetingsPerMonth)} client meetings a month. Right now that's costing you roughly ${fmtHrs(adminHrsLost)} in post-meeting admin — notes, task creation, routing everything to the right client. At your rate, that's ${fmt(revLost)} a month you're working for free. My system automates all of that. It's ${fmt(SETUP_FEE)} to set up and £150 a month to maintain. At your numbers, the setup pays for itself in ${paybackDays <= 90 ? paybackDays + ' days' : 'under 3 months'} — and from month two onwards you're recovering ${fmt(valRecovered)} a month for £150. That's a ${roiMultiple}× return."`;
+
+    $('pitch-text').innerHTML = pitch
+      .replace(fmtHrs(adminHrsLost), `<strong>${fmtHrs(adminHrsLost)}</strong>`)
+      .replace(fmt(revLost), `<strong>${fmt(revLost)}</strong>`)
+      .replace(fmt(SETUP_FEE), `<strong>${fmt(SETUP_FEE)}</strong>`)
+      .replace(fmt(valRecovered), `<strong>${fmt(valRecovered)}</strong>`)
+      .replace(roiMultiple + '× return', `<strong>${roiMultiple}× return</strong>`);
+
+    window._pitchRaw = pitch;
+  }
+
+  function copyPitch() {
+    if (!window._pitchRaw) return;
+    navigator.clipboard.writeText(window._pitchRaw).then(() => {
+      const btn = $('copy-btn');
+      btn.textContent = 'Copied ✓';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy pitch line';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  ['meetings','rate','admin','saved'].forEach(id => {
+    $(id).addEventListener('input', update);
+  });
+
+  // Nav scroll behaviour (matches index.html)
+  const nav = document.getElementById('site-nav');
+  window.addEventListener('scroll', () => {
+    const past = window.scrollY > 60;
+    nav.style.background = past
+      ? 'rgba(15,23,42,0.97)'
+      : 'linear-gradient(to bottom, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0) 100%)';
+    nav.style.borderBottom = past ? '1px solid rgba(255,255,255,0.05)' : 'none';
+  }, { passive: true });
+
+  update();
+</script>
+</body>
+</html>
