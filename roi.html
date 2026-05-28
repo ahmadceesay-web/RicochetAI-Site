@@ -559,15 +559,6 @@
           <span class="field-note">Notes, task creation, routing to right client space</span>
         </div>
 
-        <div class="field">
-          <label>Time automation saves per meeting</label>
-          <div class="slider-wrap">
-            <div class="slider-val" id="saved-val">20 <span>min saved</span></div>
-            <input type="range" id="saved" min="5" max="55" value="20" step="5">
-            <div class="range-labels"><span>5 min</span><span>55 min</span></div>
-          </div>
-          <span class="field-note">Conservative: ~80% of admin automated</span>
-        </div>
 
       </div>
     </div>
@@ -575,43 +566,27 @@
     <!-- RESULTS -->
     <div class="results-section">
       <div class="result-card">
-        <span class="result-label">Admin hours wasted / month</span>
+        <span class="result-label">Time Lost to Admin / Month</span>
         <span class="result-val" id="hours-lost">—</span>
         <span class="result-sub" id="hours-lost-sub">across all client meetings</span>
       </div>
       <div class="result-card">
-        <span class="result-label">Revenue lost to admin / month</span>
-        <span class="result-val" id="rev-lost">—</span>
-        <span class="result-sub">at your billing rate</span>
-      </div>
-      <div class="result-card">
-        <span class="result-label">Time recovered / month</span>
+        <span class="result-label">Time You Get Back / Month</span>
         <span class="result-val" id="time-saved">—</span>
-        <span class="result-sub" id="time-saved-sub">hours returned to you</span>
+        <span class="result-sub" id="time-saved-sub">automated by RicochetAI</span>
       </div>
       <div class="result-card">
-        <span class="result-label">Value recovered / month</span>
+        <span class="result-label">That is Worth / Month</span>
         <span class="result-val" id="val-saved">—</span>
-        <span class="result-sub" id="val-saved-sub">in billable time recovered</span>
+        <span class="result-sub" id="val-saved-sub">in billable time at your rate</span>
+      </div>
+      <div class="result-card">
+        <span class="result-label">You Break Even In</span>
+        <span class="result-val" id="payback-card-val">—</span>
+        <span class="result-sub" id="payback-card-sub">from day one of using RicochetAI</span>
       </div>
     </div>
 
-    <!-- PAYBACK -->
-    <div class="card payback-section">
-      <span class="label" style="margin-bottom:0.5rem;">Time to positive ROI</span>
-      <div class="payback-bar-wrap">
-        <div class="payback-bar-track">
-          <div class="payback-bar-fill" id="payback-bar" style="width:0%"></div>
-        </div>
-        <div class="payback-labels">
-          <span>Day 1</span>
-          <span id="payback-label">Payback point</span>
-          <span>Month 3</span>
-        </div>
-      </div>
-      <p class="payback-stat" id="payback-stat">—</p>
-      <p class="payback-stat" id="monthly-roi">—</p>
-    </div>
 
     <!-- Pitch line elements kept hidden so JS does not error -->
     <div style="display:none;" aria-hidden="true">
@@ -620,7 +595,7 @@
     </div>
 
     <div class="assumptions">
-      Assumptions: 4.3 weeks/month. Admin time is non-billable by default. Time recovered is conservatively billable at 60%. Numbers are illustrative and actual results vary by workflow.
+      Based on 4.3 weeks per month. RicochetAI automates 80% of post-meeting admin time based on average client results. Time recovered is valued at 60% billable rate to give a conservative estimate.
     </div>
 
   </div>
@@ -681,45 +656,32 @@
     const meetings = +$('meetings').value;
     const rate     = +$('rate').value;
     const admin    = +$('admin').value;
-    const saved    = +$('saved').value;
-
     $('meetings-val').innerHTML = meetings + ' <span>meetings/wk</span>';
     $('rate-val').innerHTML     = '£' + rate + ' <span>/hr</span>';
     $('admin-val').innerHTML    = admin + ' <span>min/meeting</span>';
-    $('saved-val').innerHTML    = saved + ' <span>min saved</span>';
 
     const meetingsPerMonth  = meetings * WEEKS_PER_MONTH;
     const adminHrsLost      = (meetingsPerMonth * admin) / 60;
     const revLost           = adminHrsLost * rate;
-    const hrsRecovered      = (meetingsPerMonth * saved) / 60;
+    const hrsRecovered      = (meetingsPerMonth * admin * 0.8) / 60;
     const valRecovered      = hrsRecovered * rate * 0.6;
     const netMonthly        = valRecovered - MONTHLY_FEE;
     const paybackDays       = netMonthly > 0 ? Math.round((SETUP_FEE / netMonthly) * 30) : 999;
     const roiMultiple       = netMonthly > 0 ? (valRecovered / MONTHLY_FEE).toFixed(1) : 0;
 
-    $('hours-lost').textContent   = fmtHrs(adminHrsLost);
-    $('hours-lost-sub').textContent = 'across ' + Math.round(meetingsPerMonth) + ' meetings/month';
-    $('rev-lost').textContent     = fmt(revLost);
-    $('time-saved').textContent   = fmtHrs(hrsRecovered);
-    $('time-saved-sub').textContent = Math.round(meetingsPerMonth) + ' meetings automated';
-    $('val-saved').textContent    = fmt(valRecovered);
-    $('val-saved-sub').textContent = 'in billable time recovered';
-
-    const barPct = paybackDays < 90 ? Math.min((paybackDays / 90) * 100, 100) : 100;
-    $('payback-bar').style.width = barPct + '%';
+    $('hours-lost').textContent      = fmtHrs(adminHrsLost);
+    $('hours-lost-sub').textContent  = 'across ' + Math.round(meetingsPerMonth) + ' meetings/month';
+    $('time-saved').textContent      = fmtHrs(hrsRecovered);
+    $('time-saved-sub').textContent  = 'automated by RicochetAI';
+    $('val-saved').textContent       = fmt(valRecovered);
+    $('val-saved-sub').textContent   = 'in billable time at your rate';
 
     if (paybackDays <= 90) {
-      $('payback-label').textContent = 'Day ' + paybackDays;
-      $('payback-stat').innerHTML = 'At your numbers you reach positive ROI in <strong>' + paybackDays + ' days</strong>.';
+      $('payback-card-val').textContent = paybackDays + ' days';
+      $('payback-card-sub').textContent = 'from day one of using RicochetAI';
     } else {
-      $('payback-label').textContent = 'Check inputs';
-      $('payback-stat').innerHTML = 'Increase savings per meeting or billing rate to improve payback.';
-    }
-
-    if (netMonthly > 0) {
-      $('monthly-roi').innerHTML = 'Monthly ROI multiple: <strong>' + roiMultiple + '×</strong> — for every £1 in managed fee, you recover <strong>' + fmt(valRecovered / MONTHLY_FEE) + '</strong> in billable time.';
-    } else {
-      $('monthly-roi').innerHTML = 'Adjust inputs — increase meetings or time saved to show positive ROI.';
+      $('payback-card-val').textContent = 'Check your inputs';
+      $('payback-card-sub').textContent = 'increase meetings or admin time';
     }
 
     const pitch = `"You're running ${Math.round(meetingsPerMonth)} client meetings a month. Right now that's costing you roughly ${fmtHrs(adminHrsLost)} in post-meeting admin — notes, task creation, routing everything to the right client. At your rate, that's ${fmt(revLost)} a month you're working for free. My system automates all of that. It's ${fmt(SETUP_FEE)} to set up and £150 a month to maintain. At your numbers, the setup pays for itself in ${paybackDays <= 90 ? paybackDays + ' days' : 'under 3 months'} — and from month two onwards you're recovering ${fmt(valRecovered)} a month for £150. That's a ${roiMultiple}× return."`;
@@ -747,7 +709,7 @@
     });
   }
 
-  ['meetings','rate','admin','saved'].forEach(id => {
+  ['meetings','rate','admin'].forEach(id => {
     $(id).addEventListener('input', update);
   });
 
@@ -765,5 +727,3 @@
 </script>
 </body>
 </html>
-
-
